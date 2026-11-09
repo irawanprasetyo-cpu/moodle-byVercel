@@ -1,0 +1,75 @@
+name: Build & Deploy Moodle ke Vercel
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_db:
+        description: "Jalankan install_database.php (HANYA pertama kali, DB masih kosong)"
+        type: boolean
+        default: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  MOODLE_BRANCH: MOODLE_502_STABLE
+  MOODLE_LANGPACK: "5.2"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache binary PHP
+        id: phpcache
+        uses: actions/cache@v4
+        with:
+          path: bin/php
+          key: php-static-${{ hashFiles('scripts/build-php.sh') }}
+
+      - name: Build PHP statis
+        if: steps.phpcache.outputs.cache-hit != 'true'
+        run: bash scripts/build-php.sh
+
+      - name: Cek ekstensi
+        run: |
+          chmod +x bin/php
+          bin/php -m | tr '\n' ' '
+          for e in gd opcache pgsql pdo_pgsql intl sodium soap zip; do
+            bin/php -m | grep -qix "$e" || { echo "EKSTENSI HILANG: $e"; exit 1; }
+          done
+          ls -lh bin/php
+
+      - name: Ambil & pangkas Moodle
+        run: |
+          bash scripts/get-moodle.sh
+          cp config.php router.php moodle/
+          curl -fL -o id.zip "https://download.moodle.org/download.php/langpack/${MOODLE_LANGPACK}/id.zip"
+          unzip -q id.zip -d moodle/lang/
+          du -sh moodle bin
+
+      - name: Instal database Moodle
+        if: ${{ inputs.install_db }}
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          MOODLE_WWWROOT: ${{ secrets.MOODLE_WWWROOT }}
+          MOODLE_ADMIN_PASS: ${{ secrets.MOODLE_ADMIN_PASS }}
+          MOODLE_ADMIN_EMAIL: ${{ secrets.MOODLE_ADMIN_EMAIL }}
+        run: |
+          CLI=$(ls moodle/admin/cli/install_database.php moodle/public/admin/cli/install_database.php 2>/dev/null | head -1)
+          echo "pakai: $CLI"
+          bin/php -d memory_limit=1G "$CLI" --agree-license \
+            --adminuser=admin --adminpass="$MOODLE_ADMIN_PASS" --adminemail="$MOODLE_ADMIN_EMAIL" \
+            --fullname="LMS Test" --shortname="LMS"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy ke Vercel
+        run: npx vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
