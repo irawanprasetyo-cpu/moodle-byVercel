@@ -72,4 +72,15 @@ jobs:
           node-version: 20
 
       - name: Deploy ke Vercel
-        run: npx vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          MOODLE_WWWROOT: ${{ secrets.MOODLE_WWWROOT }}
+        run: |
+          npx vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}" \
+            -e PGHOST="$PGHOST" -e PGPORT="$PGPORT" -e PGUSER="$PGUSER" \
+            -e PGPASSWORD="$PGPASSWORD" -e PGDATABASE="$PGDATABASE" \
+            -e MOODLE_WWWROOT="$MOODLE_WWWROOT"
