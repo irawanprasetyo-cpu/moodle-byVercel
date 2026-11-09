@@ -7,7 +7,10 @@ EXT="bcmath,ctype,curl,dom,exif,fileinfo,filter,gd,iconv,intl,mbstring,opcache,o
 mkdir -p build bin && cd build
 [ -f spc ] || { curl -fsSL -o spc https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-x86_64; chmod +x spc; }
 ./spc doctor --auto-fix
-./spc download --for-extensions="$EXT" --with-php=8.3 --prefer-pre-built
+for i in 1 2 3 4; do
+  ./spc download --for-extensions="$EXT" --with-php=8.3 --prefer-pre-built --retry=5 && break
+  echo "Download gagal, coba lagi ($i/4)..."; sleep 30
+done
 ./spc build "$EXT" --build-cli --with-suggested-libs
 cp buildroot/bin/php ../bin/php
 chmod +x ../bin/php
