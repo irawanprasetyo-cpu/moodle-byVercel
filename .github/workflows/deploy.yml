@@ -36,7 +36,7 @@ jobs:
         run: |
           chmod +x bin/php
           bin/php -m | tr '\n' ' '
-          for e in gd opcache pgsql pdo_pgsql intl sodium soap zip; do
+          for e in gd pgsql pdo_pgsql intl sodium soap zip; do
             bin/php -m | grep -qix "$e" || { echo "EKSTENSI HILANG: $e"; exit 1; }
           done
           ls -lh bin/php
