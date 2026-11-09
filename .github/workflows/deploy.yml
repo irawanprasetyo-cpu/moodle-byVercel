@@ -39,6 +39,7 @@ jobs:
           for e in gd pgsql pdo_pgsql intl sodium soap zip; do
             bin/php -m | grep -qix "$e" || { echo "EKSTENSI HILANG: $e"; exit 1; }
           done
+          bin/php -m | grep -qi "opcache" || { echo "EKSTENSI HILANG: opcache"; exit 1; }
           ls -lh bin/php
 
       - name: Ambil & pangkas Moodle
