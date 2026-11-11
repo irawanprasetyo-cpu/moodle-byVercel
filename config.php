@@ -16,6 +16,7 @@ $CFG->dboptions = [
     'dbport'    => getenv('PGPORT') ?: 5432,
     'dbsocket'  => '',
     'sslmode'   => 'require',
+    'dbhandlesoptions' => true, // <-- TAMBAHAN UNTUK SUPABASE POOLER
 ];
 
 $CFG->wwwroot  = rtrim(getenv('MOODLE_WWWROOT') ?: 'http://localhost:8080', '/');
